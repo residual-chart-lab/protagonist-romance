@@ -1,0 +1,10 @@
+{
+  "status": "LOCAL_PROTOTYPE_PACKAGED",
+  "sha256": "cf42110ff545bc332b15f1b48934b7f78fe071ea90e3dfa59b38c1023d333318",
+  "bytes": 4009204,
+  "packaged_files": 565,
+  "baseline_passed": 27,
+  "additional_passed": 4,
+  "no_participant_rooms_in_package": true,
+  "public_actions": 0
+}

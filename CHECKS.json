@@ -1,0 +1,195 @@
+{
+  "version": "0.2",
+  "executor_sha256": "eef70beb2b2cfffacda3b356785b23a0b30995b958d502ae22f2a98808d695a5",
+  "mechanism": {
+    "passed": 27,
+    "checks": [
+      {
+        "name": "initialization does not assume a relationship",
+        "passed": true
+      },
+      {
+        "name": "one-sided input cannot start the relationship",
+        "passed": true
+      },
+      {
+        "name": "human opt-in does not speak for the agent",
+        "passed": true
+      },
+      {
+        "name": "both declared choices enable this local role",
+        "passed": true
+      },
+      {
+        "name": "stale draft cannot overwrite an intervening turn",
+        "passed": true
+      },
+      {
+        "name": "agent cannot omit its observation point",
+        "passed": true
+      },
+      {
+        "name": "NO does not damage participation or create a penalty",
+        "passed": true
+      },
+      {
+        "name": "wish is not the other participant consent",
+        "passed": true
+      },
+      {
+        "name": "proposer cannot accept on behalf of the other participant",
+        "passed": true
+      },
+      {
+        "name": "unaccepted future is not a fulfilled shared promise",
+        "passed": true
+      },
+      {
+        "name": "mutual acceptance is explicit; elapsed dates do not imply failure",
+        "passed": true
+      },
+      {
+        "name": "later interpretation is visible without changing original text",
+        "passed": true
+      },
+      {
+        "name": "cannot retrospectively edit the past",
+        "passed": true
+      },
+      {
+        "name": "cannot cite a nonexistent past",
+        "passed": true
+      },
+      {
+        "name": "cannot recycle an old future identity",
+        "passed": true
+      },
+      {
+        "name": "registration capacity rolls over before command capacity is exhausted",
+        "passed": true
+      },
+      {
+        "name": "capacity rollover retains old episode checkpoints",
+        "passed": true
+      },
+      {
+        "name": "original is still retrievable after leaving the recent window",
+        "passed": true
+      },
+      {
+        "name": "pause stops role actions without deleting history",
+        "passed": true
+      },
+      {
+        "name": "participant can still retrieve their retained record after pausing",
+        "passed": true
+      },
+      {
+        "name": "another room snapshot is not transferable",
+        "passed": true
+      },
+      {
+        "name": "withdrawal is explicit and survives restoration",
+        "passed": true
+      },
+      {
+        "name": "separate process retrieves exact original bytes as UTF-8 text",
+        "passed": true
+      },
+      {
+        "name": "separate process replays all committed transitions",
+        "passed": true
+      },
+      {
+        "name": "observer check exposes no dialogue or private interpretation",
+        "passed": true
+      },
+      {
+        "name": "vendored TE entry and runtime are byte-identical",
+        "passed": true
+      },
+      {
+        "name": "original fixed distribution remains unchanged",
+        "passed": true
+      }
+    ]
+  },
+  "impressions": {
+    "passed": 17,
+    "checks": [
+      {
+        "name": "no impression inferred automatically from a source",
+        "passed": true
+      },
+      {
+        "name": "all four subjective phrases remain exact, without balanced-profile substitution",
+        "passed": true
+      },
+      {
+        "name": "associations and source provenance remain attached to the owner and subject",
+        "passed": true
+      },
+      {
+        "name": "agent view does not adopt the other participant impression",
+        "passed": true
+      },
+      {
+        "name": "impressions persist beyond the recent eight-event source window",
+        "passed": true
+      },
+      {
+        "name": "original source is still exact after rollover",
+        "passed": true
+      },
+      {
+        "name": "event storage crossed an Episode boundary",
+        "passed": true
+      },
+      {
+        "name": "revised impression links to its predecessor instead of overwriting it",
+        "passed": true
+      },
+      {
+        "name": "other contradictory or partial impressions survive revision",
+        "passed": true
+      },
+      {
+        "name": "release changes adoption, while the past impression remains retrievable",
+        "passed": true
+      },
+      {
+        "name": "cannot replace the other participant private interpretation",
+        "passed": true
+      },
+      {
+        "name": "cannot release another participant interpretation",
+        "passed": true
+      },
+      {
+        "name": "cannot silently move a prior impression to another subject",
+        "passed": true
+      },
+      {
+        "name": "cannot invent a missing source",
+        "passed": true
+      },
+      {
+        "name": "impression updates do not turn a proposal into consent or change participation",
+        "passed": true
+      },
+      {
+        "name": "separate process restores the currently adopted impression bundle",
+        "passed": true
+      },
+      {
+        "name": "external integrity receipt exports no impressions or their wording",
+        "passed": true
+      }
+    ]
+  },
+  "model_invocations": 0,
+  "real_participants": 0,
+  "independent_audit": false,
+  "role_behavior": "not tested with an LLM",
+  "observed_romantic_dialogue": false
+}
