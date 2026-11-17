@@ -14,7 +14,8 @@ import tempfile
 import uuid
 
 ROOT = Path(__file__).resolve().parent
-SCHEMA = 'protagonist-romance-v0.2'
+SCHEMA = 'protagonist-romance-v0.3'
+READABLE_SCHEMAS = (SCHEMA, 'protagonist-romance-v0.2')
 ACTORS = ('human', 'agent')
 EVENT_ID = re.compile(r'pr[0-9]{6}')
 FUTURE_ID = re.compile(r'[A-Za-z][A-Za-z0-9_.-]{0,31}')
@@ -63,7 +64,8 @@ def te(room, operation, **kwargs):
 def lock(room):
     # Distinct from the notebook lock acquired by the frozen TE entry.
     require((room / 'ROOM.json').is_file(), 'room not initialized')
-    require(json.loads((room / 'ROOM.json').read_bytes()) == {'schema': SCHEMA}, 'unexpected room')
+    require(json.loads((room / 'ROOM.json').read_bytes()) in
+        [dict(schema=value) for value in READABLE_SCHEMAS], 'unexpected room')
     return backend().notebook_lock(room / 'model-operation')
 
 
@@ -109,7 +111,7 @@ def read_events(room, event_ids):
                         api.digest(api.encoded(value)) == entry['value_sha256'], 'TE source index mismatch')
                     require(value['kind'] == 'note' and value['id'] == event_id, 'unexpected TE record')
                     envelope = value['payload']
-                    require(envelope.get('schema') == SCHEMA, 'unexpected event schema')
+                    require(envelope.get('schema') in READABLE_SCHEMAS, 'unexpected event schema')
                     require(f"pr{envelope['seq']:06d}" == event_id, 'event sequence mismatch')
                     result[event_id] = envelope
             finally:
@@ -134,14 +136,14 @@ def fields(event, required, optional=()):
     require(set(event) <= set(required) | set(optional), 'unknown event field')
 
 
-def transition(previous, event, known_ids):
+def transition(previous, event, known_ids, known_events=None):
     """Pure transition. The host supplies actor declarations; this is not authentication."""
     require(type(event) is dict, 'event must be an object')
     event = copy.deepcopy(event)
     kind, actor = event.get('type'), event.get('actor')
     require(actor in ACTORS, 'actor must be human or agent')
     require(kind in ('consent', 'message', 'future', 'accept', 'close', 'reading',
-                     'impression', 'release_impression'), 'unknown event type')
+                     'impression', 'release_impression', 'recollection'), 'unknown event type')
     old = previous['state']
     state = copy.deepcopy(old)
     current = snapshot(previous)
@@ -205,6 +207,23 @@ def transition(previous, event, known_ids):
             endpoint = state['futures'].get(event['endpoint'])
             require(endpoint is not None and endpoint['status'] == 'closed', 'endpoint must have a reported outcome')
         # The new reading is an appended event, never a replacement of those sources.
+    elif kind == 'recollection':
+        fields(event, ('type', 'actor', 'refs', 'text'), (*common, 'occasion', 'reply_to'))
+        require(type(event['refs']) is list and 1 <= len(event['refs']) <= 4, 'one to four source refs required')
+        require(all(type(ref) is str and ref in known_ids for ref in event['refs']), 'recollection references unknown past')
+        text(event['text'], 2000)
+        if 'occasion' in event:
+            text(event['occasion'], 500)
+        if 'reply_to' in event:
+            target = event['reply_to']
+            require(type(target) is str and target in known_ids, 'unknown earlier recollection')
+            earlier = (known_events or {}).get(target)
+            require(earlier is not None and earlier['event']['type'] == 'recollection',
+                'reply_to must name an earlier recollection')
+        # A fresh occasion is an event even when source refs and wording repeat.
+        # It records this actor's reading; it never declares the partner agrees.
+        next_id = f"pr{previous['seq'] + 1:06d}"
+        state['recollection_refs'] = (state.get('recollection_refs', []) + [next_id])[-4:]
     elif kind == 'impression':
         fields(event, ('type', 'actor', 'subject', 'label', 'associations', 'refs'), (*common, 'replaces'))
         require(event['subject'] in ACTORS, 'subject must be a participant in this room')
@@ -237,7 +256,7 @@ def transition(previous, event, known_ids):
             text(event['note'], 1000)
         # Only the current projection changes; the earlier event remains retrievable.
         del state['impressions'][event['id']]
-    if kind in ('message', 'reading'):
+    if kind in ('message', 'reading', 'recollection'):
         next_id = f"pr{previous['seq'] + 1:06d}"
         state['recent_refs'] = (state['recent_refs'] + [next_id])[-8:]
     return state
@@ -276,7 +295,8 @@ def init(room, agent_name='Agent', human_name='Partner'):
     with lock(room):
         te(room, 'init')
         state = dict(room_id=str(uuid.uuid4()), participants=dict(agent=agent_name, human=human_name),
-            participation=dict(agent='pending', human='pending'), futures={}, recent_refs=[], impressions={})
+            participation=dict(agent='pending', human='pending'), futures={}, recent_refs=[], impressions={},
+            recollection_refs=[])
         return store(room, None, dict(type='init', purpose='local romance protagonist scaffold',
             agent_is_AI=True, disclosure='Optional persona; no relationship is automatically established.'), state)
 
@@ -287,7 +307,9 @@ def apply(room, event):
     with lock(room):
         known = ids(room)
         previous = read_event(room, known[-1])
-        next_state = transition(previous, event, set(known))
+        reply = event.get('reply_to') if type(event) is dict and event.get('type') == 'recollection' else None
+        targets = read_events(room, [reply]) if type(reply) is str and reply in known else {}
+        next_state = transition(previous, event, set(known), targets)
         return store(room, previous, event, next_state)
 
 
@@ -298,6 +320,7 @@ def context(room, viewpoint='agent'):
         last = read_event(room, known[-1])
         state = last['state']
         recent = read_events(room, state['recent_refs'])
+        recalls = read_events(room, state.get('recollection_refs', []))
         return dict(ok=True, visibility='participants-only', snapshot=snapshot(last),
             instruction=(ROOT / 'AGENT_ENTRY_JA.md').read_text(encoding='utf-8') if viewpoint == 'agent'
                 else 'Human participant reference packet; not an AI role instruction.',
@@ -311,6 +334,10 @@ def context(room, viewpoint='agent'):
             impressions=[dict(id=key, **copy.deepcopy(value)) for key, value in state['impressions'].items()
                          if value['owner'] == viewpoint],
             impression_use='These are your situated impressions, not source facts. They may shape tone and expectations; preserve their wording and provenance instead of routinely replacing them with balanced profiles.',
+            recollections=[dict(id=ref, observed_at_utc=recalls[ref]['observed_at_utc'],
+                                event=copy.deepcopy(recalls[ref]['event']))
+                           for ref in state.get('recollection_refs', [])],
+            recollection_use='You may revisit a shared past without needing new information. Each recollection is a new actor-owned occasion. Read its source refs when needed; earlier words and impressions remain unchanged. A partner response is separate, and intimacy or agreement is not inferred. No schedule or quota applies.',
             older_past=dict(retained_event_count=len(known), retrieval='read by an explicit prNNNNNN id',
                 recent_window_is_not_complete_history=True),
             action_contract='Supply an event as the current actor; all agent actions except consent require this based_on snapshot.')
@@ -337,10 +364,11 @@ def check(room):
                 require(row['seq'] == 1 and row['event']['type'] == 'init' and row['previous_sha256'] is None, 'invalid initial event')
                 require(row['state']['participation'] == dict(agent='pending', human='pending') and
                     row['state']['futures'] == {} and row['state']['recent_refs'] == [] and
-                    row['state']['impressions'] == {}, 'invalid initial state')
+                    row['state']['impressions'] == {} and
+                    row['state'].get('recollection_refs', []) == [], 'invalid initial state')
             else:
                 require(row['previous_sha256'] == digest(previous), 'broken event linkage')
-                require(transition(previous, row['event'], seen) == row['state'], 'state does not replay')
+                require(transition(previous, row['event'], seen, retained) == row['state'], 'state does not replay')
             previous = row
             seen.add(key)
         return dict(ok=True, schema=SCHEMA, integrity='retained events replayed through actual TE reads',

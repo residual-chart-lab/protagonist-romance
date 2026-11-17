@@ -1,22 +1,17 @@
 {
-  "status": "READY_FOR_TECHNICAL_PREVIEW_DISTRIBUTION",
-  "version": "0.2",
-  "delivery": "preview.2",
-  "archive_root": "protagonist-v02",
-  "functionality_frozen": true,
-  "source_package_sha256": "9bebb0e156904d568d73c8f49ee38d23f39b63d88f4e31e11426c162e0638c18",
-  "tested_executor_sha256": "eef70beb2b2cfffacda3b356785b23a0b30995b958d502ae22f2a98808d695a5",
-  "changed_existing_files": [
-    "SOURCE_REFERENCE.json",
-    "PREVIOUS_VERSION.json",
-    "README_JA.md"
-  ],
-  "source_change_scope": "Remove absolute development paths and change private-prototype heading to technical-preview; no executable or role-instruction changes.",
-  "local_mechanism_checks": 27,
-  "local_impression_checks": 17,
-  "independent_audit": false,
+  "status": "TESTED_TECHNICAL_PREVIEW",
+  "version": "0.3",
+  "delivery": "preview.1",
+  "archive_root": "protagonist-v03",
+  "tested_executor_sha256": "56b5f942ff1a9794e71eac78a79154385df1728f3dc46409038e57419edf0dde",
+  "checks": {
+    "mechanism": 26,
+    "impressions": 17,
+    "recollections": 29
+  },
+  "legacy_v02_verified": true,
   "model_invocations": 0,
   "real_participants": 0,
-  "role_behavior": "not tested with an LLM",
-  "public_actions": 0
+  "independent_audit": false,
+  "participant_rooms_included": false
 }

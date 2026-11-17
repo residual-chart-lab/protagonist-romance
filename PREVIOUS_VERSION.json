@@ -1,10 +1,7 @@
 {
-  "status": "LOCAL_PROTOTYPE_PACKAGED",
-  "sha256": "cf42110ff545bc332b15f1b48934b7f78fe071ea90e3dfa59b38c1023d333318",
-  "bytes": 4009204,
-  "packaged_files": 565,
-  "baseline_passed": 27,
-  "additional_passed": 4,
-  "no_participant_rooms_in_package": true,
-  "public_actions": 0
+  "version": "0.2",
+  "delivery": "preview.2",
+  "release": "https://github.com/residual-chart-lab/protagonist-romance/releases/tag/v0.2-preview.2",
+  "zip_sha256": "14c5cf060110a521bff795e3f8e792b01bcb62e06423a8804d653d641febbf23",
+  "transition": "v0.3 can read v0.2 rooms. New events use the v0.3 schema; use v0.3 thereafter. No past event or ROOM.json rewrite."
 }
