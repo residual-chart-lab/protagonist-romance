@@ -127,7 +127,7 @@ def main():
         old_source=old_command('apply',dict(type='message',actor='human',text='[v0.2の合成原文]\n🌿'))['event_id']
         old_header=(old_room/'ROOM.json').read_bytes()
         old_original=model.private_read(old_room,old_source)
-        check('v0.3 can read and replay an actual v0.2 room before appending',
+        check('the current runtime can read and replay an actual v0.2 room before appending',
             model.context(old_room)['recollections']==[] and model.check(old_room)['ok'])
         historical={p:hashlib.sha256(p.read_bytes()).hexdigest() for p in (old_room/'notebook').glob('episode-*.json')}
         model.apply(old_room,dict(type='recollection',actor='agent',refs=[old_source],text='[v0.3で加えた合成の読み]',based_on=model.context(old_room)['snapshot']))
@@ -135,7 +135,7 @@ def main():
             model.private_read(old_room,old_source)==old_original and (old_room/'ROOM.json').read_bytes()==old_header and
             all(hashlib.sha256(p.read_bytes()).hexdigest()==value for p,value in historical.items()))
         process=subprocess.run([sys.executable,'-I','-B','-X','utf8',str(ROOT/'protagonist.py'),'check','--room',str(old_room)],capture_output=True)
-        check('mixed v0.2 and v0.3 events replay in a fresh process',process.returncode==0 and json.loads(process.stdout)['ok'])
+        check('mixed legacy and current events replay in a fresh process',process.returncode==0 and json.loads(process.stdout)['ok'])
         legacy_verified=True
     assert hashlib.sha256((ROOT/'protagonist.py').read_bytes()).hexdigest()==executor_sha
     result=dict(status='RECOLLECTION_CHECKS_PASS',passed=len(checks),checks=checks,tested_executor_sha256=executor_sha,

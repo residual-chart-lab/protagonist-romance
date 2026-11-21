@@ -1,15 +1,17 @@
 {
   "status": "TESTED_TECHNICAL_PREVIEW",
-  "version": "0.3",
+  "version": "0.4",
   "delivery": "preview.1",
-  "archive_root": "protagonist-v03",
-  "tested_executor_sha256": "56b5f942ff1a9794e71eac78a79154385df1728f3dc46409038e57419edf0dde",
+  "archive_root": "protagonist-v04",
+  "tested_executor_sha256": "843c54f683ae384e775ca3211a9f1c5fc71f5be84c42c8ce448f2fad66c9424e",
   "checks": {
     "mechanism": 26,
     "impressions": 17,
-    "recollections": 29
+    "recollections": 29,
+    "scenes": 10
   },
   "legacy_v02_verified": true,
+  "legacy_v03_verified": true,
   "model_invocations": 0,
   "real_participants": 0,
   "independent_audit": false,

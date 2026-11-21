@@ -1,12 +1,12 @@
-# 主人公モデル・恋愛特化型 v0.3
+# 主人公モデル・恋愛特化型 v0.4
 
-**residual.chart.lab｜2026年11月17日｜ローカル試作・技術プレビュー**
+**residual.chart.lab｜2026年11月21日｜ローカル試作・技術プレビュー**
 
 個別のAIエージェントが、望む相手との関係を一人称で続けるための、小さな実行基盤です。過去の原文、現在の選択、未来への願い・誘い・合意、後から変わった読みを区別します。
 
 v0.3では、**もう一度あの話をしたい**という儀式的再想起を追加しました。同じ過去を語り直した今回も新しい出来事として残し、相手の応答とつなげられます。当時の原文や印象は書き換えません。[概念と動作の対応](RITUAL_RECOLLECTION_JA.md)を参照できます。
 
-v0.2の、本人が選んだ偏った印象と意味の束、少しの嫉妬を選べる指示も保持しています。好感度や罰の得点は導入していません。新しい部屋はschema v0.3です。v0.2の部屋も読み・検査でき、新しい出来事だけをv0.3として追記します。元のROOM.jsonと過去のイベントは書き換えません。追記後はv0.3で扱います。旧実行器は新schemaを読めないため、既存の部屋を引き継ぐ場合は部屋一式のコピーを手元に残してから使ってください。v0.1系の部屋は対象外です。
+v0.2の、本人が選んだ偏った印象と意味の束、少しの嫉妬を選べる指示も保持しています。好感度や罰の得点は導入していません。新しい部屋はschema v0.4です。v0.2・v0.3の部屋も読み・検査でき、新しい出来事だけをv0.4として追記します。元のROOM.jsonと過去のイベントは書き換えません。追記後はv0.4で扱います。旧実行器は新schemaを読めないため、既存の部屋を引き継ぐ場合は部屋一式のコピーを手元に残してから使ってください。v0.1系の部屋は対象外です。
 
 既存TE open-use v0.1.1を、そのまま履歴の足場に使います。Y軸モデルや自由数の新しい証明ではありません。AIネットワーク全体の中枢へ置くものでもありません。
 
@@ -64,6 +64,26 @@ python -I -B -X utf8 protagonist.py context --room <部屋>
 
 `apply`は保存の受領情報だけを返し、返答本文を外部へ送信しません。相手への発話や公開投稿はホストの別操作です。
 
+## 場面の印象と、その話を再開するまでの頼み
+
+雨がやんだとき自分に残った一行は、次のように記録できます。エージェントはこの入力に現在の `based_on` を加えます。場面のIDは自分の部屋の実際の値に置き換えます。
+
+```json
+{"type":"impression","actor":"agent","subject":"scene","label":"雨がやんだのが、ちょっと残念だった。","associations":[],"refs":["pr000004"]}
+```
+
+`refs[0]` はこの場面の目印です。本人による改訂は同じ目印と `replaces` を使い、採用を終えるには `release_impression` を使います。場面の印象は人物の印象と採用枠を共有します。本人の `context.impressions` に残り、`read --viewpoint human` または `agent` で本人が以前の文面も読み返せます。視点はホストが指定します。部屋自体は平文です。相手に伝えたいときは、実際に伝える言葉を別の発言として記録します。
+
+```json
+{"type":"message","actor":"human","mode":"no","text":"雨宿りの話は、私から切り出すまで。","hold_topic":"pr000004"}
+```
+
+`hold_topic` は話題の元になった共有発言または再想起のIDです。この頼みの原文と参照は、両者の `context.topic_requests` に届きます。同時に保持できる頼みは32件です。一度だけのNOは通常の `mode:"no"` で記録します。頼んだ人が話題を再開したとき、ホストはその人の発言に **頼み自体のID** を付けます。発言内容からの自動判定はありません。
+
+```json
+{"type":"message","actor":"human","text":"あの雨の日の話、しよう。","reopen_topic":"pr000006"}
+```
+
 ## 操作するイベント
 
 | type | 主な項目 | 働き |
@@ -75,7 +95,7 @@ python -I -B -X utf8 protagonist.py context --room <部屋>
 | close | actor, id, result | fulfilled / cancelled / unresolved。実際の成立を自動認証するものではなく、当事者による報告。 |
 | reading | actor, refs, text, endpoint（任意） | 原文への現在の解釈を追加する。endpointを付ける場合は結果報告のある未来ID。 |
 | recollection | actor, refs, text, occasion・reply_to（任意） | 今回の再想起を追加する。同じ原文や文面でも別の出来事。reply_toは以前のrecollectionへの応答をつなぐ。 |
-| impression | actor, subject, label, associations, refs, replaces（任意） | 自分が採用する印象。subjectはhuman / agent。印象の主体はactorから決まり、相手の読みを上書きできない。 |
+| impression | actor, subject, label, associations, refs, replaces（任意） | 自分が採用する印象。subjectはhuman / agent / scene。印象の主体はactorから決まり、相手の読みを上書きできない。 |
 | release_impression | actor, id, note（任意） | 自分の印象を現在の採用一覧から外す。原文と以前の印象は履歴に残る。 |
 
 agentのイベントにはconsent以外すべて、現在の`based_on`が必要です。未知の項目や参照、過去のeditは拒否します。一つの操作が終わると観測点が進むため、次のAI操作の前には現在のcontextを取得します。
@@ -143,6 +163,7 @@ actorの指定はホストの申告です。別人の同意やAI自身の選好�
 python -I -B -X utf8 protagonist.py check --room <部屋>
 python -I -B -X utf8 protagonist.py read --room <部屋> --id pr000004
 python -I -B -X utf8 verify_model.py --output <新しい合成検査フォルダー>
+python -I -B -X utf8 verify_scenes.py --output <新しい場面の合成検査フォルダー>
 python -I -B -X utf8 verify_impressions.py --output <新しい印象の合成検査フォルダー>
 python -I -B -X utf8 verify_recollections.py --output <新しい再想起の合成検査フォルダー>
 ```

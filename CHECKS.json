@@ -1,7 +1,7 @@
 {
-  "version": "0.3",
+  "version": "0.4",
   "delivery": "preview.1",
-  "executor_sha256": "56b5f942ff1a9794e71eac78a79154385df1728f3dc46409038e57419edf0dde",
+  "executor_sha256": "843c54f683ae384e775ca3211a9f1c5fc71f5be84c42c8ce448f2fad66c9424e",
   "mechanism": {
     "passed": 26,
     "checks": [
@@ -292,7 +292,7 @@
         "passed": true
       },
       {
-        "name": "v0.3 can read and replay an actual v0.2 room before appending",
+        "name": "the current runtime can read and replay an actual v0.2 room before appending",
         "passed": true
       },
       {
@@ -300,12 +300,58 @@
         "passed": true
       },
       {
-        "name": "mixed v0.2 and v0.3 events replay in a fresh process",
+        "name": "mixed legacy and current events replay in a fresh process",
+        "passed": true
+      }
+    ]
+  },
+  "scenes": {
+    "passed": 10,
+    "checks": [
+      {
+        "name": "existing room opens at the same snapshot",
+        "passed": true
+      },
+      {
+        "name": "each viewpoint restores only its own impression of the same scene",
+        "passed": true
+      },
+      {
+        "name": "unspoken words stay outside partner context",
+        "passed": true
+      },
+      {
+        "name": "one explicit request survives the recent window in both views",
+        "passed": true
+      },
+      {
+        "name": "partner read omits private words",
+        "passed": true
+      },
+      {
+        "name": "requester can reopen without changing the impressions",
+        "passed": true
+      },
+      {
+        "name": "the partner sees the words chosen for sharing as a separate event",
+        "passed": true
+      },
+      {
+        "name": "revision retains original wording and its link",
+        "passed": true
+      },
+      {
+        "name": "release removes adoption and retains both the old impression and the owner’s note",
+        "passed": true
+      },
+      {
+        "name": "history and room header survive append and fresh replay",
         "passed": true
       }
     ]
   },
   "legacy_v02_verified": true,
+  "legacy_v03_verified": true,
   "model_invocations": 0,
   "real_participants": 0,
   "independent_audit": false,
