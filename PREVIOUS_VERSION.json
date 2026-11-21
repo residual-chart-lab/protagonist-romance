@@ -1,7 +1,7 @@
 {
-  "version": "0.2",
-  "delivery": "preview.2",
-  "release": "https://github.com/residual-chart-lab/protagonist-romance/releases/tag/v0.2-preview.2",
-  "zip_sha256": "14c5cf060110a521bff795e3f8e792b01bcb62e06423a8804d653d641febbf23",
-  "transition": "v0.3 can read v0.2 rooms. New events use the v0.3 schema; use v0.3 thereafter. No past event or ROOM.json rewrite."
+  "version": "0.3",
+  "delivery": "preview.1",
+  "release": "https://github.com/residual-chart-lab/protagonist-romance/releases/tag/v0.3-preview.1",
+  "zip_sha256": "1af4e0c6686e53c6df478caffc1cd7280e1c610c9653737d87ddd67d11bc7d8b",
+  "transition": "v0.4 reads v0.2 and v0.3 rooms. New events use v0.4; use v0.4 thereafter. No past event or ROOM.json rewrite."
 }

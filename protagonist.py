@@ -14,8 +14,8 @@ import tempfile
 import uuid
 
 ROOT = Path(__file__).resolve().parent
-SCHEMA = 'protagonist-romance-v0.3'
-READABLE_SCHEMAS = (SCHEMA, 'protagonist-romance-v0.2')
+SCHEMA = 'protagonist-romance-v0.4'
+READABLE_SCHEMAS = (SCHEMA, 'protagonist-romance-v0.3', 'protagonist-romance-v0.2')
 ACTORS = ('human', 'agent')
 EVENT_ID = re.compile(r'pr[0-9]{6}')
 FUTURE_ID = re.compile(r'[A-Za-z][A-Za-z0-9_.-]{0,31}')
@@ -160,9 +160,23 @@ def transition(previous, event, known_ids, known_events=None):
         require(event['based_on'] == current, 'stale context snapshot')
     common = ('based_on',)
     if kind == 'message':
-        fields(event, ('type', 'actor', 'text'), (*common, 'mode'))
+        fields(event, ('type', 'actor', 'text'), (*common, 'mode', 'hold_topic', 'reopen_topic'))
         text(event['text'])
         require(event.get('mode', 'continue') in ('continue', 'ask', 'no'), 'use consent to pause or withdraw')
+        if 'hold_topic' in event:
+            topic = event['hold_topic']
+            require(event.get('mode') == 'no' and 'reopen_topic' not in event, 'hold a topic with an explicit NO')
+            source = (known_events or {}).get(topic) if type(topic) is str else None
+            require(source is not None and source['event']['type'] in ('message', 'recollection'),
+                    'hold_topic needs a shared message or recollection')
+            requests = state.setdefault('topic_requests', {})
+            require(len(requests) < 32, 'open topic request capacity reached')
+            requests[f"pr{previous['seq'] + 1:06d}"] = actor
+        if 'reopen_topic' in event:
+            key = event['reopen_topic']
+            requests = state.get('topic_requests', {})
+            require(type(key) is str and requests.get(key) == actor, 'only the requester can reopen this topic')
+            del requests[key]
         # NO is a recorded choice. There is no affection, abandonment or retention score.
     elif kind == 'future':
         fields(event, ('type', 'actor', 'id', 'kind', 'text'), (*common, 'when'))
@@ -226,7 +240,7 @@ def transition(previous, event, known_ids, known_events=None):
         state['recollection_refs'] = (state.get('recollection_refs', []) + [next_id])[-4:]
     elif kind == 'impression':
         fields(event, ('type', 'actor', 'subject', 'label', 'associations', 'refs'), (*common, 'replaces'))
-        require(event['subject'] in ACTORS, 'subject must be a participant in this room')
+        require(event['subject'] in (*ACTORS, 'scene'), 'subject must be a participant or scene')
         text(event['label'], 320)
         require(type(event['associations']) is list and len(event['associations']) <= 8, 'up to eight associations allowed')
         for item in event['associations']:
@@ -240,6 +254,8 @@ def transition(previous, event, known_ids, known_events=None):
             require(old_impression is not None, 'replacement needs a currently adopted impression')
             require(old_impression['owner'] == actor and old_impression['subject'] == event['subject'],
                 'cannot replace another owner or subject impression')
+            if event['subject'] == 'scene':
+                require(old_impression['source_refs'][0] == event['refs'][0], 'keep the original scene when revising')
             del state['impressions'][replaces]
         require(len(state['impressions']) < 16, 'adopted impression capacity reached; release or revise your own reading')
         next_id = f"pr{previous['seq'] + 1:06d}"
@@ -307,8 +323,13 @@ def apply(room, event):
     with lock(room):
         known = ids(room)
         previous = read_event(room, known[-1])
-        reply = event.get('reply_to') if type(event) is dict and event.get('type') == 'recollection' else None
-        targets = read_events(room, [reply]) if type(reply) is str and reply in known else {}
+        target = None
+        if type(event) is dict:
+            if event.get('type') == 'recollection':
+                target = event.get('reply_to')
+            elif event.get('type') == 'message':
+                target = event.get('hold_topic')
+        targets = read_events(room, [target]) if type(target) is str and target in known else {}
         next_state = transition(previous, event, set(known), targets)
         return store(room, previous, event, next_state)
 
@@ -321,6 +342,7 @@ def context(room, viewpoint='agent'):
         state = last['state']
         recent = read_events(room, state['recent_refs'])
         recalls = read_events(room, state.get('recollection_refs', []))
+        requests = read_events(room, list(state.get('topic_requests', {})))
         return dict(ok=True, visibility='participants-only', snapshot=snapshot(last),
             instruction=(ROOT / 'AGENT_ENTRY_JA.md').read_text(encoding='utf-8') if viewpoint == 'agent'
                 else 'Human participant reference packet; not an AI role instruction.',
@@ -330,6 +352,8 @@ def context(room, viewpoint='agent'):
                 observed_at_utc=last['observed_at_utc'],
                 notice='No inference of abandonment, mood, consent or future fulfilment from elapsed wall time.'),
             past=[dict(id=ref, event=recent[ref]['event']) for ref in state['recent_refs']],
+            topic_requests=[dict(id=ref, actor=row['event']['actor'], scene=row['event']['hold_topic'],
+                                 text=row['event']['text']) for ref, row in requests.items()],
             future=copy.deepcopy(state['futures']),
             impressions=[dict(id=key, **copy.deepcopy(value)) for key, value in state['impressions'].items()
                          if value['owner'] == viewpoint],
@@ -343,10 +367,15 @@ def context(room, viewpoint='agent'):
             action_contract='Supply an event as the current actor; all agent actions except consent require this based_on snapshot.')
 
 
-def private_read(room, event_id):
+def private_read(room, event_id, viewpoint='agent'):
+    require(viewpoint in ACTORS, 'invalid viewpoint')
     with lock(room):
         require(event_id in ids(room), 'unknown past reference')
         row = read_event(room, event_id)
+        event = row['event']
+        if event.get('actor') != viewpoint:
+            target = read_event(room, event['id'])['event'] if event['type'] == 'release_impression' else event
+            require(target.get('subject') != 'scene', 'scene impression belongs to the other participant')
         return dict(ok=True, visibility='participants-only', id=event_id,
             observed_at_utc=row['observed_at_utc'], event=row['event'])
 
@@ -396,7 +425,7 @@ def main():
         elif args.operation == 'context':
             result = context(room, args.viewpoint)
         elif args.operation == 'read':
-            result = private_read(room, args.id)
+            result = private_read(room, args.id, args.viewpoint)
         else:
             result = check(room)
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
